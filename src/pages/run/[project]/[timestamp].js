@@ -104,7 +104,9 @@ export default function ProjectRunsPage({ project, timestamp }) {
                     <>
                       {" "}
                       <Link to={`/${project}/${timestamp}`}>
-                        show remote view
+                        <code>
+                          /{project}/{timestamp}
+                        </code>
                       </Link>
                     </>
                   )}
