@@ -6,9 +6,7 @@ import "firebaseui/dist/firebaseui.css";
 
 import { firebaseApp, AuthContext } from "../api";
 
-console.log({ firebaseApp: firebaseApp });
-
-const ui = new auth.AuthUI(firebaseApp.auth());
+const ui = auth ? new auth.AuthUI(firebaseApp.auth()) : null;
 
 const AuthInit = Symbol(`init`);
 

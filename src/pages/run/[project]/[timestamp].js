@@ -27,7 +27,7 @@ export default function ProjectRunsPage({ project, timestamp }) {
         return (
           <>
             <h2>Tags</h2>
-            {projectInfo?.runs[timestamp]?.meta?.tags?.length ? (
+            {projectInfo?.runs?.[timestamp]?.meta?.tags?.length ? (
               <ul>
                 {projectInfo.runs[timestamp].meta.tags.map((tag) => (
                   <li key={tag}>
