@@ -71,7 +71,7 @@ export default function ProjectRunsPage({ project, timestamp }) {
       {({ chart, projectInfo }) => {
         return (
           <>
-            {projectInfo?.runs?.[timestamp]?.meta?.tags?.length && (
+            {projectInfo?.runs?.[timestamp]?.meta?.tags?.length ? (
               <>
                 <h2>Tags</h2>
                 <ul>
@@ -80,7 +80,7 @@ export default function ProjectRunsPage({ project, timestamp }) {
                   ))}
                 </ul>
               </>
-            )}
+            ) : null}
             {chart}
           </>
         );
