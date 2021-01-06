@@ -9,6 +9,7 @@ import {
   YAxis,
   ReferenceArea,
   Tooltip,
+  Legend,
 } from "recharts";
 
 const _1MB = 1024 * 1024;
@@ -17,9 +18,9 @@ const memoryFormatter = (value) => {
   return `${Math.round(value / _1MB)} MB`;
 };
 
-const cpuFormatter = (value) => {
-  return `${Math.round(value)}%`;
-};
+// const cpuFormatter = (value) => {
+//   return `${Math.round(value)}%`;
+// };
 
 const timeFormatter = (value) => `${parseFloat(value / 1000).toFixed(2)}s`;
 
@@ -44,6 +45,12 @@ function rankProcTag(proc) {
 
   return 8;
 }
+
+const lineColors = {
+  memory: `#ff0000`,
+  cpu: `#00ff00`,
+  eventLoopDelay: `#0000ff`,
+};
 
 const colors = [
   "#75eab6",
@@ -134,9 +141,12 @@ const CustomTooltip = ({
           stroke={payloadItem.stroke}
           label={payloadItem.name}
           value={
+            /*
+        
             payloadItem.name === `CPU usage`
               ? cpuFormatter(payloadItem.value)
-              : payloadItem.name === `Memory usage`
+              :*/
+            payloadItem.name === `Memory usage`
               ? memoryFormatter(payloadItem.value)
               : payloadItem.name === `Event loop delay`
               ? timeFormatter(payloadItem.value)
@@ -340,12 +350,12 @@ export default ({ data, activities: rawActivities, processes, meta }) => {
                 tickFormatter={timeFormatter}
                 ticks={10}
               />
-              <YAxis
+              {/* <YAxis
                 yAxisId="cpu"
                 domain={[() => 0, () => meta[`cpu_max_${processId}`]]}
                 tickFormatter={cpuFormatter}
                 label={{ value: "CPU usage", angle: -90 }}
-              />
+              /> */}
               <YAxis
                 yAxisId="delay"
                 domain={[0, () => meta[`delay_max_${processId}`]]}
@@ -383,7 +393,7 @@ export default ({ data, activities: rawActivities, processes, meta }) => {
                   ifOverflow="visible"
                 />
               ))}
-              <Line
+              {/* <Line
                 yAxisId="cpu"
                 xAxisId="time"
                 name="CPU usage"
@@ -393,7 +403,7 @@ export default ({ data, activities: rawActivities, processes, meta }) => {
                 stroke="#8884d8"
                 fill="#8884d8"
                 connectNulls={true}
-              />
+              /> */}
               <Line
                 yAxisId="mem"
                 xAxisId="time"
@@ -401,8 +411,8 @@ export default ({ data, activities: rawActivities, processes, meta }) => {
                 isAnimationActive={false}
                 // dot={false}
                 dataKey={`mem_${processId}`}
-                stroke="#ff0000"
-                fill="#ff0000"
+                stroke={lineColors.memory}
+                fill={lineColors.memory}
                 connectNulls={true}
               />
               <Line
@@ -410,12 +420,14 @@ export default ({ data, activities: rawActivities, processes, meta }) => {
                 xAxisId="time"
                 name="Event loop delay"
                 isAnimationActive={false}
+                dot={{ strokeWidth: 5 }}
                 // dot={false}
                 dataKey={`delay_${processId}`}
-                stroke="#00FF00"
-                fill="#00FF00"
-                connectNulls={true}
+                stroke={lineColors.eventLoopDelay}
+                fill={lineColors.eventLoopDelay}
+                // connectNulls={true}
               />
+              <Legend verticalAlign="bottom" height={36} />
             </LineChart>
           </ResponsiveContainer>
         </div>
