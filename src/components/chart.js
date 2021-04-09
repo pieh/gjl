@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 
 import {
   ResponsiveContainer,
@@ -11,6 +11,8 @@ import {
   Tooltip,
   Legend,
 } from "recharts";
+
+import HTML2Canvas from "html2canvas";
 
 const _1MB = 1024 * 1024;
 
@@ -175,6 +177,7 @@ const CustomTooltip = ({
 };
 
 export default ({ data, activities: rawActivities, processes, meta }) => {
+  const canvasRef = useRef();
   const [range, setRange] = useState({
     startIndex: null,
     endIndex: null,
@@ -216,6 +219,8 @@ export default ({ data, activities: rawActivities, processes, meta }) => {
       processGroups,
     });
   }, [processes, setProcessedProcesses]);
+
+  window.canvasRef = canvasRef;
 
   if (data.length < 2) {
     return null;
@@ -312,7 +317,7 @@ export default ({ data, activities: rawActivities, processes, meta }) => {
       <React.Fragment key={processId}>
         <h3>{label ?? `PID: ${processId}`}</h3>
         <div style={{ height: `80vh` }}>
-          <ResponsiveContainer>
+          <ResponsiveContainer ref={canvasRef}>
             <LineChart
               key={processId}
               data={data}
@@ -513,6 +518,19 @@ export default ({ data, activities: rawActivities, processes, meta }) => {
           </li>
         ))}
       </ul>
+      {false && (
+        <button
+          onClick={() => {
+            console.log({ a: canvasRef.current.container });
+            HTML2Canvas(canvasRef.current.container).then((canvas) => {
+              const base64image = canvas.toDataURL("image/png");
+              window.location.href = base64image;
+            });
+          }}
+        >
+          screenshot
+        </button>
+      )}
       <h2>Charts</h2>
       {charts}
     </>

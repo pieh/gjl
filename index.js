@@ -5,6 +5,9 @@ const fs = require("fs-extra");
 const os = require(`os`);
 const pidusage = require(`pidusage`);
 const ipc = require("node-ipc");
+// const signalExit = require(`signal-exit`);
+
+const { saveMeta } = require(`./server/socket`);
 
 const { INTERVAL_TIME } = require(`./shared/constants`);
 const { getSamplesPath } = require(`./shared/utils`);
@@ -53,33 +56,64 @@ function addEvent(event) {
 }
 
 let elapsedLimit;
+// let r = [];
+// let lastSampleTime = null;
+const sample = (cb) => {
+  if (PIDs.length === 0) {
+    if (cb) {
+      cb();
+    }
+    return;
+  }
+  pidusage(PIDs, (err, aggStats) => {
+    if (err) {
+      // if (err.message.includes(`No matching pid found`)) {
+      //   // PIDs.delete(pid);
+      // } else {
+      console.log(`error`, err);
+      // }
+      return;
+    }
 
-const sample = () => {
-  PIDs.forEach((pid) => {
-    pidusage(pid, (err, stats) => {
-      if (err) {
-        if (err.message.includes(`No matching pid found`)) {
-          PIDs.delete(pid);
-        } else {
-          console.log(`error`, err);
-        }
-        return;
+    // let w = {};
+    // r.push(w);
+
+    for (let pid of PIDs) {
+      const stats = aggStats[pid];
+      if (stats) {
+        // w[pid] = stats;
+        addEvent({
+          type: `CPU_MEM`,
+          // timestamp: stats.timestamp,
+          pid,
+          mem: stats.memory,
+          cpu: stats.cpu,
+          ctime: stats.ctime,
+        });
       }
+    }
 
-      addEvent({
-        type: `CPU_MEM`,
-        timestamp: stats.timestamp,
-        pid,
-        mem: stats.memory,
-        cpu: stats.cpu,
-      });
-    });
+    if (cb) {
+      cb();
+    }
   });
 };
 
-const PIDs = new Set();
+const PIDs = [];
 
 let processCounter = {};
+
+let samplingInterval;
+// per pidusage README
+// Avoid using setInterval as they could overlap with asynchronous processing
+// seems like it being called in same frame multiple times returns 0
+function sampleInterval(time) {
+  samplingInterval = setTimeout(function () {
+    sample(function () {
+      sampleInterval(time);
+    });
+  }, time);
+}
 
 function incrementProcessCounter(type) {
   let count = (processCounter[type] || 0) + 1;
@@ -96,7 +130,9 @@ const run = () => {
 
   ipc.serve(function () {
     ipc.server.on(`gjl.register`, function (data) {
-      PIDs.add(data.pid);
+      if (!PIDs.includes(data.pid)) {
+        PIDs.push(data.pid);
+      }
 
       const registerEvent = {
         type: `PROCESS_REGISTER`,
@@ -114,6 +150,21 @@ const run = () => {
   });
 
   ipc.server.start();
+
+  const envVars = Object.entries(process.env).reduce((acc, [envVar, value]) => {
+    if (envVar.startsWith(`GATSBY_`)) {
+      acc[envVar] = value;
+    }
+    return acc;
+  }, {});
+
+  const tags = process.env.GJL_TAGS ? process.env.GJL_TAGS.split(`,`) : [];
+
+  saveMeta(projectName, timestamp, (meta) => {
+    meta.envVars = envVars;
+    meta.tags = tags;
+    return meta;
+  });
 
   let didWriteInitialLines = false;
   // first arg: <node bin>, second arg: <path to this script>, rest: <build|develop> [flags]
@@ -147,7 +198,6 @@ const run = () => {
           uuid: msg.action.payload.uuid,
           timestamp: new Date(msg.action.timestamp).getTime(),
         });
-        sample();
       } else if (msg.action.type === `ACTIVITY_END`) {
         addEvent({
           type: `ACTIVITY_END`,
@@ -155,7 +205,6 @@ const run = () => {
           uuid: msg.action.payload.uuid,
           timestamp: new Date(msg.action.timestamp).getTime(),
         });
-        sample();
       } else if (msg.action.type === `SET_STATUS`) {
         addEvent({
           type: `SET_STATUS`,
@@ -168,13 +217,20 @@ const run = () => {
     fs.appendFileSync(file, JSON.stringify(msg, null, 2) + `\n`);
   });
 
-  const samplingInterval = setInterval(sample, INTERVAL_TIME);
+  // const samplingInterval = setInterval(sample, INTERVAL_TIME);
   sample();
+  sampleInterval(INTERVAL_TIME);
+
+  // signalExit(() => {
+  //   fs.outputJSONSync(`proc.json`, r, { spaces: 2 });
+  // });
 
   gatsbyProcess.on(`exit`, (...args) => {
     elapsedLimit = Date.now();
     console.log(`process exit args`, args);
-    clearInterval(samplingInterval);
+    if (samplingInterval) {
+      clearTimeout(samplingInterval);
+    }
 
     console.log(`waiting for event loop delay samples ~15 seconds`);
     setTimeout(() => {

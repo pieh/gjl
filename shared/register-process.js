@@ -80,6 +80,10 @@ if (process.env.GJL_IPC_ID) {
     tag: `N/A`,
   };
   let registerImmediately = true;
+  if (!entryFile) {
+    console.log(`no-entry-file`, process.argv);
+    return;
+  }
   if (entryFile.includes(`.bin`) && entryFile.includes(`gatsby`)) {
     meta.label = meta.tag = `Gatsby main`;
     meta.command = process.argv[2];

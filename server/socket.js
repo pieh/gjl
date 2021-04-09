@@ -47,9 +47,15 @@ function saveMeta(projectID, timestamp, handler) {
   const { meta, filePath } = readMeta(projectID, timestamp);
   fs.outputJSONSync(filePath, handler(meta), { spaces: 2 });
 
-  projects[projectID].runs[timestamp].meta = meta;
+  if (
+    projects[projectID] &&
+    projects[projectID].runs &&
+    projects[projectID].runs[timestamp]
+  ) {
+    projects[projectID].runs[timestamp].meta = meta;
 
-  emitter.emit(`${projectID}/newRun`);
+    emitter.emit(`${projectID}/newRun`);
+  }
 }
 
 function fileWithSamplesToProjectMeta(filePath) {
@@ -298,4 +304,5 @@ function startDataServer(server) {
 
 module.exports = {
   startDataServer,
+  saveMeta,
 };
